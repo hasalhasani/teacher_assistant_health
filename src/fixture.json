@@ -1,0 +1,17 @@
+[
+  { "id": "101", "occurred_at": "2026-10-05T09:51:00.000Z", "created_at": "2026-10-05T09:51:00.100Z", "workflow_id": "wf-title", "workflow_name": "Chat title", "node_name": "LLM", "execution_id": "48211", "environment": "dev", "level": "error", "error_message": "Sample: upstream model timed out after 30 s", "context": {} },
+  { "id": "100", "occurred_at": "2026-10-05T09:30:00.000Z", "created_at": "2026-10-05T09:30:00.100Z", "workflow_id": "wf-image", "workflow_name": "Image generation", "node_name": "HTTP Request", "execution_id": "48170", "environment": "dev", "level": "error", "error_message": "Sample: 429 from the image provider", "context": {} },
+  { "id": "99", "occurred_at": "2026-10-05T08:02:00.000Z", "created_at": "2026-10-05T08:02:00.100Z", "workflow_id": "wf-chat", "workflow_name": "Chat agent", "node_name": "Postgres", "execution_id": "47902", "environment": "dev", "level": "fatal", "error_message": "Sample: connection pool exhausted", "context": {} },
+  { "id": "98", "occurred_at": "2026-10-05T07:40:00.000Z", "created_at": "2026-10-05T07:40:00.100Z", "workflow_id": "wf-chat", "workflow_name": "Chat agent", "node_name": "Compliance Check Agent", "execution_id": "47850", "environment": "dev", "level": "error", "error_message": "Sample: no prompt specified", "context": {} },
+
+  { "id": 41, "source": "webhook", "message": "HTTP 502", "route": "/presentation", "app_variant": "teacher", "received_at": "2026-10-05T09:49:00.000Z", "raw_payload": { "webhook": "https://dev.n8n-direct.maisumhayati-ai.com/webhook/presentation-plan", "status": 502 } },
+  { "id": 40, "source": "console.error", "message": "Sample: [Chat] image generation failed", "route": "/", "app_variant": "teacher", "received_at": "2026-10-05T09:31:00.000Z", "raw_payload": { "webhook": "https://dev.n8n-direct.maisumhayati-ai.com/webhook/generate-image", "status": 500 } },
+  { "id": 39, "source": "window.onerror", "message": "Sample: Loading chunk 284 failed", "route": "/data-analysis", "app_variant": "general", "received_at": "2026-10-05T07:15:00.000Z", "raw_payload": {} },
+
+  { "feedback_id": "fb-3", "variant": "teacher", "vote": "down", "reasons": ["inaccurate", "too_long"], "comment": "Sample: the answer used the wrong grade level", "timestamp": "2026-10-05T09:40:00.000Z" },
+  { "feedback_id": "fb-2", "variant": "general", "vote": "down", "reasons": ["inaccurate"], "comment": null, "timestamp": "2026-10-05T08:05:00.000Z" },
+  { "feedback_id": "fb-1", "variant": "teacher", "vote": "up", "reasons": [], "comment": null, "timestamp": "2026-10-05T06:30:00.000Z" },
+
+  { "report_id": "sample-1", "kind": "support", "user_name": "Sample Teacher", "variant": "teacher", "comment": null, "description": "Sample: the worksheet export downloads an empty file", "satisfaction": null, "timestamp": "2026-10-05T09:10:00.000Z" },
+  { "report_id": "sample-2", "kind": "opinion", "user_name": "Sample Teacher", "variant": "teacher", "comment": "Sample: lesson plans save me an hour a week", "description": null, "satisfaction": 5, "timestamp": "2026-10-05T07:30:00.000Z" }
+]

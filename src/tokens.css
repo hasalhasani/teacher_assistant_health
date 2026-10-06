@@ -1,0 +1,89 @@
+/* Design tokens, copied from the Teaching Assistant frontend
+   (src/styles/global.css) so both apps share one look. Re-copy after a theme
+   change there. Light appearance only: the frontend's dark values are not copied. */
+:root {
+  color-scheme: light;
+
+  /* Surfaces (Material 3 surface roles) */
+  --app-ground: #E9EEF4;        /* body + sidebar */
+  --bg-primary: #FFFFFF;        /* the page surface */
+  --bg-secondary: #F3F6FA;      /* surface-container: cards, composer, bubbles */
+  --bg-tertiary: #E1E8EF;       /* surface-container-high: fields, chips, hovers */
+  --sidebar-bg: var(--app-ground);
+  --material-bg: rgba(255, 255, 255, 0.8);   /* floating layer: menus, drawer, toasts */
+  --segment-active: #FFFFFF;
+
+  /* Content (blue-tinted neutrals) */
+  --text-primary: #14202B;      /* 16.5:1 on page */
+  --text-secondary: #46566A;    /* 6.4:1 on ground */
+  --text-muted: #566577;        /* 6.0:1 on page, 4.8:1 on fields */
+  --border-color: rgba(20, 32, 43, 0.10);
+  --border-strong: rgba(20, 32, 43, 0.20);
+
+  /* Primary (the palette blue, one step darker) */
+  --accent-primary: #25628A;    /* 6.6:1 with white; 6.1:1 as text on cards */
+  --accent-hover: #1D5072;
+  --accent-light: rgba(37, 98, 138, 0.10);   /* tint for chips with blue text */
+  --on-accent: #FFFFFF;
+  --primary-container: #D5E6F2; /* selected nav, tonal emphasis */
+  --on-primary-container: #0C2F45;           /* 10.9:1 */
+  --secondary-container: #E2DCF3;            /* tonal buttons: the palette violet, tinted */
+  --on-secondary-container: #22094F;         /* 12.9:1 */
+  --focus-ring: #25628A;
+
+  /* Supporting palette at full strength, for brand moments only (logo mark,
+     voice glow). Never behind white text: teal is 3.9:1, and cyan only takes
+     dark text. */
+  --brand-blue: #3078A6;
+  --brand-teal: #218CAA;
+  --brand-cyan: #69CEE3;
+
+  /* Signal. Warning is burnt orange, not amber, so nothing reads as gold. */
+  --error-color: #BA1A1A;
+  --success-color: #1E7F3A;
+  --warning-color: #9A4A00;     /* 6.3:1 on page */
+  --info-color: #5F4691;        /* 7.6:1 on page, 7.0:1 on cards — the neutral
+                                   fourth tone, for observations that are
+                                   neither good news nor a problem */
+
+  /* Elevation: Material keeps it low; tone does most of the work */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --font-sans: "Roboto", "Noto Sans Arabic",
+    -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);            /* Material standard */
+  --ease-out: cubic-bezier(0.05, 0.7, 0.1, 1);   /* Material emphasized decelerate */
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  --page-gutter: 28px;
+  --page-title-size: 24px;
+
+  /* Legacy aliases used across feature stylesheets */
+  --accent-secondary: var(--accent-primary);
+  --primary-color: var(--accent-primary);
+  --primary-hover: var(--accent-hover);
+  --text-color: var(--text-primary);
+  --danger-color: var(--error-color);
+  --card-bg: var(--bg-secondary);
+  --accent-brand: var(--brand-cyan);
+}
+
+@media (prefers-contrast: more) {
+  :root { --text-secondary: #303D4D; --text-muted: #3E4B5B; --border-color: rgba(0, 0, 0, 0.35); --accent-primary: #1D5072; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root { --material-bg: var(--bg-primary); }
+}
