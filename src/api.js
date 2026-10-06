@@ -17,12 +17,10 @@ export async function fetchStats({ base, range, mock, signal }) {
 
   let response;
   try {
-    response = await fetch(`${base}/webhook/dashboard-stats`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ range }),
-      signal,
-    });
+    // A bare POST, with the range in the URL. Adding a JSON body would make the
+    // browser send a CORS pre-check first, and n8n only answers that pre-check
+    // for localhost, so a hosted copy of this page would be blocked.
+    response = await fetch(`${base}/webhook/dashboard-stats?range=${encodeURIComponent(range)}`, { method: 'POST', signal });
   } catch (err) {
     if (err?.name === 'AbortError') throw err;
     throw new StatsError('unreachable', 'n8n did not answer.');

@@ -19,7 +19,7 @@ Open `http://localhost:5173/?mock=1` to see it with sample data and no backend.
 
 ## How it gets data
 
-The page makes one request: `POST {n8n}/webhook/dashboard-stats` with `{ "range": "1h" | "24h" | "7d" }`. It sends it when the page opens, once an hour while it stays open, and when Refresh is pressed.
+The page makes one request: `POST {n8n}/webhook/dashboard-stats?range=1h|24h|7d`, with no body and no custom headers so that a hosted copy is not blocked by the browser's CORS pre-check. It sends it when the page opens, once an hour while it stays open, and when Refresh is pressed.
 
 ## What the webhook must return
 
