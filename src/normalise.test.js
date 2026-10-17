@@ -18,6 +18,7 @@ test('raw error_log rows, as the webhook returns them', () => {
   expect(out.frontendErrors).toBeNull();
   expect(out.feedback).toBeNull();
   expect(normalise(rows, '7d', NOW).backendErrors.count).toBe(2);
+  expect(normalise(rows, '30d', NOW).series.starts).toHaveLength(30);
   // The same rows wrapped by an Aggregate node, which is what dev returns.
   expect(normalise([{ data: rows }], '24h', NOW).backendErrors.count).toBe(2);
   expect(normalise([{ data: rows }], '24h', NOW).totalRows).toBe(3);
@@ -36,14 +37,30 @@ test('named groups, as dev returns them, with executions', () => {
     'front-end error log': [],
   };
   const out = normalise(reply, '24h', NOW);
-  expect(out.executions).toMatchObject({ count: 3, failed: 1 });
+  expect(out.executions).toMatchObject({ count: 3, failed: 1, minMs: 1000, medianMs: 2000, maxMs: 4000 });
   // Name borrowed from the error log; most failures first.
-  expect(out.executions.byWorkflow[0]).toMatchObject({ workflow: 'Chat-Vis', runs: 2, failures: 1, medianMs: 4000, lastStatus: 'error' });
+  expect(out.executions.byWorkflow[0]).toMatchObject({ workflow: 'Chat-Vis', runs: 2, failures: 1, minMs: 2000, medianMs: 4000, maxMs: 4000, lastStatus: 'error' });
+  expect(out.prompts).toBeNull();
   expect(out.executions.byWorkflow[1]).toMatchObject({ workflow: 'other', runs: 1, failures: 0, lastStatus: 'success' });
   expect(out.backendErrors.count).toBe(1);
   // An empty named group still shows, as zero.
   expect(out.frontendErrors).toMatchObject({ count: 0, recent: [] });
   expect(out.feedback).toBeNull();
+});
+
+test('the time-filtered reply dev returns, with request counts', () => {
+  const reply = [{
+    'filter executions by time (n8n)': [{ id: '1', status: 'success', startedAt: '2026-10-05T09:28:52.484Z', stoppedAt: '2026-10-05T09:28:52.605Z', workflowId: 'B3' }],
+    'error log': [{}],
+    'front-end error log': [{}],
+    'request count': [{ request: 'ساعدني في كتابة ايميل', count: 3 }, { request: ' ساعدني في كتابة ايميل', count: '2' }, { request: 'other', count: 1 }],
+  }];
+  const out = normalise(reply, '24h', NOW);
+  expect(out.executions).toMatchObject({ count: 1, succeeded: 1, minMs: 121 });
+  expect(out.backendErrors.count).toBe(0);
+  expect(out.frontendErrors.count).toBe(0);
+  // Counts arrive pre-summed and have no timestamp; same text is merged.
+  expect(out.prompts).toMatchObject({ count: 6, top: [{ key: 'ساعدني في كتابة ايميل', count: 5 }, { key: 'other', count: 1 }] });
 });
 
 test('the sample file covers all four tables', () => {
@@ -53,4 +70,6 @@ test('the sample file covers all four tables', () => {
   expect(out.feedback).toMatchObject({ up: 1, down: 2 });
   expect(out.feedback.byReason[0]).toEqual({ key: 'inaccurate', count: 2 });
   expect(out.reports).toMatchObject({ support: 1, opinions: 1, satisfaction: 5 });
+  // Same prompt in different capitals counts once.
+  expect(out.prompts.top[0]).toEqual({ key: 'sample: make a worksheet on fractions for grade 5', count: 2 });
 });

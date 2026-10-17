@@ -45,7 +45,8 @@ export const ENVIRONMENTS = [
 ];
 
 export const RANGES = [
-  { id: '1h', label: '1 hour' },
-  { id: '24h', label: '24 hours' },
-  { id: '7d', label: '7 days' },
+  { id: '1h', label: '1 hour', hours: 1 },
+  { id: '24h', label: '24 hours', hours: 24 },
+  { id: '7d', label: '7 days', hours: 168 },
+  { id: '30d', label: '1 month', hours: 720 },
 ];

@@ -6,7 +6,10 @@
 //   feedback             -> has vote
 //   user_reports         -> has report_id and kind
 //   n8n executions       -> has startedAt and workflowId (n8n's "Get many executions")
-const HOURS = { '1h': 1, '24h': 24, '7d': 168 };
+//   request count        -> has request and count (already counted by the workflow)
+import { RANGES } from './endpoints.js';
+
+const HOURS = Object.fromEntries(RANGES.map((r) => [r.id, r.hours]));
 const RECENT = 50;
 
 const stripWebhook = (url) => (url ? String(url).replace(/^.*\/webhook\//, '') : null);
@@ -75,20 +78,28 @@ const KINDS = [
       ms: r.stoppedAt ? new Date(r.stoppedAt) - new Date(r.startedAt) : null,
     }),
   },
+  {
+    key: 'prompts',
+    // Already counted and time-filtered by the workflow ("request count"), so no time.
+    is: (r) => 'request' in r && 'count' in r,
+    map: (r) => ({ time: null, prompt: text(r.request), count: Number(r.count) || 0 }),
+  },
 ];
 
 // When the reply names its groups ("error log", "front-end error log", ...),
 // the name tells which table an EMPTY group belongs to, so the page can say
 // "none" for it instead of hiding the section.
-const NAMES = { backend: /^(?!.*front).*error/i, frontend: /front/i, feedback: /feedback/i, reports: /report|support/i, executions: /execution/i };
+const NAMES = { backend: /^(?!.*front).*error/i, frontend: /front/i, feedback: /feedback/i, reports: /report|support/i, executions: /execution/i, prompts: /prompt|request/i };
 
 const FAILED = ['error', 'crashed'];
 const MINUTE = 60 * 1000;
 // range -> [number of chart buckets, bucket length]
-const BUCKETS = { '1h': [12, 5 * MINUTE], '24h': [24, 60 * MINUTE], '7d': [7, 24 * 60 * MINUTE] };
-const median = (values) => {
+const BUCKETS = { '1h': [12, 5 * MINUTE], '24h': [24, 60 * MINUTE], '7d': [7, 24 * 60 * MINUTE], '30d': [30, 24 * 60 * MINUTE] };
+// Median, shortest and longest of the runs that have a duration.
+const spread = (values) => {
   const sorted = values.filter((v) => v !== null).sort((a, b) => a - b);
-  return sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
+  if (!sorted.length) return { medianMs: null, minMs: null, maxMs: null };
+  return { medianMs: sorted[Math.floor(sorted.length / 2)], minMs: sorted[0], maxMs: sorted[sorted.length - 1] };
 };
 
 const countBy = (rows, pick) => {
@@ -103,7 +114,7 @@ export function normalise(reply, range, now = Date.now()) {
 
   // The workflow returns every row it has; the range is applied here.
   const since = now - (HOURS[range] || 24) * 3600 * 1000;
-  const sets = { backend: null, frontend: null, feedback: null, reports: null, executions: null };
+  const sets = { backend: null, frontend: null, feedback: null, reports: null, executions: null, prompts: null };
   const workflowNames = new Map();
   let totalRows = 0;
   // Rows can arrive bare, or nested however the workflow groups them: an
@@ -131,18 +142,15 @@ export function normalise(reply, range, now = Date.now()) {
     totalRows += 1;
     sets[kind.key] ||= [];
     const mapped = kind.map(value);
-    const at = new Date(mapped.time).getTime();
-    if (kind.key === 'executions') { fetchedExecutions += 1; oldestExecution = Math.min(oldestExecution, at); }
-    if (at >= since) sets[kind.key].push(mapped);
+    // Rows without a time were already filtered by the workflow.
+    if (mapped.time === null || new Date(mapped.time).getTime() >= since) sets[kind.key].push(mapped);
   };
-  let fetchedExecutions = 0;
-  let oldestExecution = Infinity;
   collect(reply);
   Object.values(sets).forEach((set) => set?.sort((a, b) => new Date(b.time) - new Date(a.time)));
 
   // A section is null when the reply had no rows of that table at all, so the
   // page can hide it instead of showing a misleading zero.
-  const { backend, frontend, feedback, reports, executions } = sets;
+  const { backend, frontend, feedback, reports, executions, prompts } = sets;
 
   const byWorkflow = new Map();
   executions?.forEach((e) => {
@@ -204,12 +212,9 @@ export function normalise(reply, range, now = Date.now()) {
       count: executions.length,
       failed: executions.filter((e) => FAILED.includes(e.status)).length,
       succeeded: executions.filter((e) => e.status === 'success').length,
-      medianMs: median(executions.map((e) => e.ms)),
-      // n8n hands back its newest N executions. If even the oldest of them is
-      // inside the range, the range holds more runs than were counted.
-      capped: fetchedExecutions > 0 && oldestExecution > since ? fetchedExecutions : null,
+      ...spread(executions.map((e) => e.ms)),
       byWorkflow: [...byWorkflow.values()]
-        .map(({ durations, ...w }) => ({ ...w, medianMs: median(durations) }))
+        .map(({ durations, ...w }) => ({ ...w, ...spread(durations) }))
         .sort((a, b) => b.failures - a.failures || b.runs - a.runs),
     },
     reports: reports && {
@@ -217,6 +222,15 @@ export function normalise(reply, range, now = Date.now()) {
       opinions: opinions.length,
       satisfaction: opinions.length ? Math.round((opinions.reduce((sum, r) => sum + Number(r.satisfaction), 0) / opinions.length) * 10) / 10 : null,
       recent: reports.slice(0, RECENT),
+    },
+    prompts: prompts && {
+      count: prompts.reduce((sum, r) => sum + r.count, 0),
+      // ponytail: exact text match after trim and lower-case, so reworded prompts
+      // count separately. Group them in the workflow if the list is too scattered.
+      top: [...prompts.reduce((m, r) => {
+        const key = r.prompt?.trim().toLowerCase();
+        return key ? m.set(key, (m.get(key) || 0) + r.count) : m;
+      }, new Map())].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 8),
     },
   };
 }

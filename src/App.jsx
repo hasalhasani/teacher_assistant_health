@@ -52,22 +52,32 @@ const EXECUTION_COLUMNS = [
   { key: 'runs', label: 'Runs' },
   { key: 'failures', label: 'Failed' },
   { key: 'rate', label: 'Error rate' },
+  { key: 'min', label: 'Min time' },
   { key: 'median', label: 'Median time' },
+  { key: 'max', label: 'Max time' },
   { key: 'last', label: 'Last run' },
   { key: 'lastStatus', label: 'Last result' },
 ];
 const executionRows = (rows = []) => rows.map((w) => ({
   ...w,
   rate: percent(w.runs ? w.failures / w.runs : null),
+  min: duration(w.minMs),
   median: duration(w.medianMs),
+  max: duration(w.maxMs),
   last: timeAgo(w.lastRunAt),
 }));
 
+const PROMPT_COLUMNS = [
+  { key: 'key', label: 'Prompt' },
+  { key: 'count', label: 'Times asked' },
+];
+
 const COLOR = { run: 'var(--chart-run)', failed: 'var(--chart-failed)', frontend: 'var(--chart-frontend)' };
-const RANGE_WORDS = { '1h': 'the last hour', '24h': 'the last 24 hours', '7d': 'the last 7 days' };
+const RANGE_WORDS = { '1h': 'the last hour', '24h': 'the last 24 hours', '7d': 'the last 7 days', '30d': 'the last month' };
 
 const PROBLEMS = {
   unreachable: 'n8n did not answer, so nothing below is current.',
+  signed_out: 'You are signed out. Opening the sign-in page…',
   bad_reply: 'n8n answered, but not with a list of table rows. Check what the dashboard-stats workflow returns.',
 };
 
@@ -77,12 +87,10 @@ export default function App() {
   const [state, setState] = useState({ loading: false, data: null, error: null, loadedAt: null });
   const [tab, setTab] = useState(null);
 
-  const base = ENVIRONMENTS.find((e) => e.id === env)?.base;
-
   const load = useCallback(async (signal) => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const data = await fetchStats({ base, range, mock, signal });
+      const data = await fetchStats({ env, range, mock, signal });
       setState({ loading: false, data, error: null, loadedAt: new Date() });
     } catch (error) {
       if (error?.name === 'AbortError') return;
@@ -90,7 +98,7 @@ export default function App() {
       // Keep the last good data on screen, marked stale by the banner.
       setState((s) => ({ ...s, loading: false, error }));
     }
-  }, [base, range]);
+  }, [env, range]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,8 +133,7 @@ export default function App() {
       id: 'feedback', label: 'Thumbs down', count: data.feedback.down,
       node: <ErrorsTable rows={data.feedback.recent} columns={FEEDBACK_COLUMNS} empty="No answers were marked down in this range." />,
     },
-    data.endpoints && { id: 'endpoints', label: 'Endpoints', count: data.endpoints.length, node: <EndpointsTable groups={groups} /> },
-  ].filter(Boolean);
+    data.endpoints && { id: 'endpoints', label: 'Endpoints', count: data.endpoints.length, node: <EndpointsTable groups={groups} /> },  ].filter(Boolean);
   const table = tables.find((t) => t.id === tab) || tables[0];
 
   return (
@@ -141,6 +148,9 @@ export default function App() {
           <button type="button" className="tonal" onClick={() => load()} disabled={loading}>
             <Icon name={loading ? 'progress_activity' : 'refresh'} spin={loading} /> Refresh
           </button>
+          <form method="post" action="/api/logout">
+            <button type="submit" className="tonal">Sign out</button>
+          </form>
         </div>
       </header>
 
@@ -158,21 +168,26 @@ export default function App() {
           {data.totalRows === 0 && <p className="empty">The workflow returned no rows.</p>}
 
           {/* Each tile and section appears only when the reply held rows from its table. */}
-          <section className="tiles" aria-label="Summary">
+          {/* Two rows, so no tile gets too narrow: executions, then everything else. */}
+          <section className="tiles" aria-label="Executions summary">
+            {data.executions && (
+              <>
+                <Tile icon="sync" tone="info" value={data.executions.count} label="Executions" />
+                <Tile icon="check_circle" tone="success" value={percent(data.executions.count ? data.executions.succeeded / data.executions.count : null)} label="Succeeded" />
+                <Tile icon="error" tone="error" value={data.executions.failed} label="Failed executions" />
+                <Tile icon="schedule" value={duration(data.executions.minMs)} label="Shortest run" />
+                <Tile icon="schedule" value={duration(data.executions.medianMs)} label="Median run time" />
+                <Tile icon="schedule" value={duration(data.executions.maxMs)} label="Longest run" />
+              </>
+            )}
+          </section>
+          <section className="tiles" aria-label="Errors and feedback summary">
             {data.endpoints && (
               <>
                 <Tile icon="check_circle" tone="success" value={counts.healthy} label="Healthy" />
                 <Tile icon="warning" tone="warning" value={counts.degraded} label="Degraded" />
                 <Tile icon="error" tone="error" value={counts.failing + counts.unregistered} label="Failing or not registered" />
                 <Tile icon="schedule" value={counts.idle} label="No traffic" />
-              </>
-            )}
-            {data.executions && (
-              <>
-                <Tile icon="sync" tone="info" value={data.executions.count} label="Executions" />
-                <Tile icon="check_circle" tone="success" value={percent(data.executions.count ? data.executions.succeeded / data.executions.count : null)} label="Succeeded" />
-                <Tile icon="error" tone="error" value={data.executions.failed} label="Failed executions" />
-                <Tile icon="schedule" value={duration(data.executions.medianMs)} label="Median run time" />
               </>
             )}
             {data.backendErrors && <Tile icon="database" tone="error" value={data.backendErrors.count} label="Backend errors logged" />}
@@ -182,11 +197,6 @@ export default function App() {
             {data.reports && <Tile icon="star" value={data.reports.satisfaction ?? '–'} label={`Satisfaction, of 5 (${data.reports.opinions} opinions)`} />}
           </section>
 
-          {data.executions?.capped && (
-            <p className="hint">
-              Only the newest {data.executions.capped} executions were returned, and they do not reach back to the start of this range, so the execution numbers are undercounted.
-            </p>
-          )}
 
           {/* Desktop layout: a wide chart on the left, its breakdown on the right. */}
           <div className="deskGrid">
@@ -241,6 +251,13 @@ export default function App() {
               </section>
             )}
           </div>
+
+          {/* Always shown: an environment without the "request count" node says so. */}
+          <section className="card">
+            <h2>Most requested prompts</h2>
+            <p className="hint">Asked in {RANGE_WORDS[data.range]}, most often first.</p>
+            <ErrorsTable rows={data.prompts?.top} columns={PROMPT_COLUMNS} empty={data.prompts ? 'No prompts in this range.' : 'The stats workflow does not return prompts yet.'} />
+          </section>
 
           {table && (
             <section className="card">

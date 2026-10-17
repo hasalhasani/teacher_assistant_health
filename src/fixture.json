@@ -13,5 +13,11 @@
   { "feedback_id": "fb-1", "variant": "teacher", "vote": "up", "reasons": [], "comment": null, "timestamp": "2026-10-05T06:30:00.000Z" },
 
   { "report_id": "sample-1", "kind": "support", "user_name": "Sample Teacher", "variant": "teacher", "comment": null, "description": "Sample: the worksheet export downloads an empty file", "satisfaction": null, "timestamp": "2026-10-05T09:10:00.000Z" },
-  { "report_id": "sample-2", "kind": "opinion", "user_name": "Sample Teacher", "variant": "teacher", "comment": "Sample: lesson plans save me an hour a week", "description": null, "satisfaction": 5, "timestamp": "2026-10-05T07:30:00.000Z" }
+  { "report_id": "sample-2", "kind": "opinion", "user_name": "Sample Teacher", "variant": "teacher", "comment": "Sample: lesson plans save me an hour a week", "description": null, "satisfaction": 5, "timestamp": "2026-10-05T07:30:00.000Z" },
+
+  { "request count": [
+    { "request": "Sample: make a worksheet on fractions for grade 5", "count": 1 },
+    { "request": "Sample: Make a worksheet on fractions for grade 5", "count": 1 },
+    { "request": "Sample: plan a lesson on the water cycle", "count": 1 }
+  ] }
 ]

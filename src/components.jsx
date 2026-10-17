@@ -47,8 +47,7 @@ export const Tile = ({ icon, tone = 'muted', value, label }) => (
   <div className="tile">
     <span className={`tileIcon tone-${tone}`}><Icon name={icon} /></span>
     <span className="tileValue">{value}</span>
-    <span className="tileLabel">{label}</span>
-  </div>
+    <span className="tileLabel">{label}</span>  </div>
 );
 
 // Icon plus text, so status never depends on colour alone.

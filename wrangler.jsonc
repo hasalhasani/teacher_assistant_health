@@ -1,0 +1,17 @@
+{
+  // Must be the name of the existing Worker in the Cloudflare dashboard.
+  "name": "teacher-assistant-health",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Every request goes through worker/index.js first, so nothing but the
+    // sign-in page is served to a browser that has not signed in.
+    "run_worker_first": true
+  },
+  // At most 10 sign-in attempts a minute from one address.
+  "ratelimits": [
+    { "name": "LOGIN_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
+  ]
+}
