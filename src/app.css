@@ -57,7 +57,7 @@ h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .empty { color: var(--text-secondary); padding: 12px 0; }
 
 /* Controls */
-.segmented { display: inline-flex; gap: 2px; padding: 2px; background: var(--bg-tertiary); border-radius: 10px; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; background: var(--bg-tertiary); border-radius: 10px; }
 .segmented button {
   min-height: 36px;
   padding: 0 14px;

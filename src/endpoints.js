@@ -49,4 +49,15 @@ export const RANGES = [
   { id: '24h', label: '24 hours', hours: 24 },
   { id: '7d', label: '7 days', hours: 168 },
   { id: '30d', label: '1 month', hours: 720 },
+  { id: '90d', label: '3 months', hours: 90 * 24 },
+  { id: '180d', label: '6 months', hours: 180 * 24 },
+  { id: '270d', label: '9 months', hours: 270 * 24 },
+  { id: '365d', label: '1 year', hours: 365 * 24 },
+];
+
+// The frontend's APP_VARIANT. Executions, backend errors and prompts carry none, so they never filter.
+export const VARIANTS = [
+  { id: 'all', label: 'All' },
+  { id: 'teacher', label: 'Teacher' },
+  { id: 'general', label: 'General' },
 ];

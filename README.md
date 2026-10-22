@@ -1,4 +1,4 @@
-# Teaching Assistant health dashboard
+# Assistant health dashboard
 
 An internal, read-only page with a summary, charts and tables of n8n executions, backend errors and frontend errors for the Teaching Assistant. Light appearance only. It is a separate app from the frontend and shares only its look.
 
@@ -41,7 +41,7 @@ npx wrangler secret put PASSWORD_HASH   # paste the hash
 
 ## How it gets data
 
-The page makes one request: `POST /api/stats?env=dev|staging|production&range=1h|24h|7d|30d`, to its own Worker. It sends it when the page opens, once an hour while it stays open, and when Refresh is pressed.
+The page makes one request: `POST /api/stats?env=dev|staging|production&range=1h|24h|7d|30d|90d|180d|270d|365d`, to its own Worker. It sends it when the page opens, once an hour while it stays open, and when Refresh is pressed.
 
 The Worker checks the session, then calls `POST {n8n}/webhook/dashboard-stats?range=…` on that environment's n8n host with the header `X-Dashboard-Key`, whose value is the `N8N_KEY` secret (`npx wrangler secret put N8N_KEY`). The JSON body is the window to query, for example `{ "range": "24h", "since": "2026-10-16T09:00:00.000Z", "until": "2026-10-17T09:00:00.000Z" }`; in n8n it is `{{ $json.body.since }}` and `{{ $json.body.until }}`.
 
@@ -53,8 +53,8 @@ Raw table rows as JSON. They can be a flat array or nested the way n8n groups th
 
 | Table | Recognised by | Columns the page uses |
 |---|---|---|
-| `error_log` | `error_message` | `occurred_at`, `level`, `workflow_name`, `workflow_id`, `node_name`, `error_message`, `execution_id`, `environment` |
-| `frontend_error_log` | `received_at` and `source` | `received_at`, `source`, `message`, `route`, `app_variant`, `raw_payload` (for `webhook` and `status`) |
+| `error_log` | `error_message` | `occurred_at`, `level`, `workflow_name`, `workflow_id`, `node_name`, `error_message`, `execution_id`, `environment`, `user_information` `{ name, email }` |
+| `frontend_error_log` | `received_at` and `source` | `received_at`, `source`, `message`, `route`, `app_variant`, `raw_payload` (for `webhook`, `status` and `userInformation`), or a `user_information` column `{ name, email }` |
 | `feedback` | `vote` | `timestamp`, `vote`, `reasons`, `comment`, `variant` |
 | `user_reports` | `report_id` and `kind` | `timestamp`, `kind`, `satisfaction`, `description`, `comment`, `user_name`, `variant` |
 | n8n executions ("Get many executions") | `startedAt` and `workflowId` | `startedAt`, `stoppedAt`, `status`, `workflowId` |

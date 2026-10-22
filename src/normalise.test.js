@@ -73,3 +73,23 @@ test('the sample file covers all four tables', () => {
   // Same prompt in different capitals counts once.
   expect(out.prompts.top[0]).toEqual({ key: 'sample: make a worksheet on fractions for grade 5', count: 2 });
 });
+
+test('variant filter, user information and the long ranges', () => {
+  const rows = [
+    { received_at: '2026-10-05T09:00:00.000Z', source: 'webhook', message: 'a', app_variant: 'teacher', raw_payload: { userInformation: { name: 'Sara', email: 's@x.com' } } },
+    { received_at: '2026-10-05T09:00:00.000Z', source: 'webhook', message: 'b', app_variant: 'general', user_information: { name: 'Ali', email: null } },
+    { occurred_at: '2026-10-05T09:00:00.000Z', error_message: 'no variant column', workflow_id: 'w', user_information: { name: 'Sara', email: 's@x.com' } },
+  ];
+  expect(normalise(rows, '24h', NOW).frontendErrors.recent.map((r) => r.user)).toEqual(['Sara · s@x.com', 'Ali']);
+  const teacher = normalise(rows, '24h', NOW, 'teacher');
+  expect(teacher.frontendErrors.recent.map((r) => r.message)).toEqual(['a']);
+  expect(teacher.backendErrors.count).toBe(1); // tables without a variant are kept
+  expect(teacher.backendErrors.recent[0].user).toBe('Sara · s@x.com');
+  expect(normalise(rows, '24h', NOW, 'general').frontendErrors.recent.map((r) => r.message)).toEqual(['b']);
+  // A row from ten months ago is in the year, not in 9 months; weeks are the buckets.
+  const old = [{ occurred_at: '2025-12-10T00:00:00.000Z', error_message: 'x' }];
+  expect(normalise(old, '270d', NOW).backendErrors.count).toBe(0);
+  expect(normalise(old, '365d', NOW).backendErrors.count).toBe(1);
+  expect(normalise(old, '365d', NOW).series.starts).toHaveLength(52);
+  expect(normalise(old, '90d', NOW).series.starts).toHaveLength(13);
+});

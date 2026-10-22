@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchStats } from './api';
-import { ENVIRONMENTS, RANGES } from './endpoints';
+import { ENVIRONMENTS, RANGES, VARIANTS } from './endpoints';
 import { buildRows, countByStatus } from './health';
 import { Counts, EndpointsTable, ErrorsTable, Icon, Segmented, Tile, duration, percent, timeAgo } from './components';
 import { TimeBars, WorkflowBars } from './charts';
@@ -21,6 +21,7 @@ const BACKEND_COLUMNS = [
   { key: 'message', label: 'Message' },
   { key: 'executionId', label: 'Execution', mono: true },
   { key: 'environment', label: 'Environment' },
+  { key: 'user', label: 'User' },
 ];
 const FRONTEND_COLUMNS = [
   { key: 'time', label: 'When' },
@@ -29,7 +30,8 @@ const FRONTEND_COLUMNS = [
   { key: 'route', label: 'Page', mono: true },
   { key: 'webhook', label: 'Endpoint', mono: true },
   { key: 'status', label: 'HTTP' },
-  { key: 'appVariant', label: 'Variant' },
+  { key: 'user', label: 'User' },
+  { key: 'variant', label: 'Variant' },
 ];
 
 const FEEDBACK_COLUMNS = [
@@ -73,7 +75,10 @@ const PROMPT_COLUMNS = [
 ];
 
 const COLOR = { run: 'var(--chart-run)', failed: 'var(--chart-failed)', frontend: 'var(--chart-frontend)' };
-const RANGE_WORDS = { '1h': 'the last hour', '24h': 'the last 24 hours', '7d': 'the last 7 days', '30d': 'the last month' };
+const RANGE_WORDS = {
+  '1h': 'the last hour', '24h': 'the last 24 hours', '7d': 'the last 7 days', '30d': 'the last month',
+  '90d': 'the last 3 months', '180d': 'the last 6 months', '270d': 'the last 9 months', '365d': 'the last year',
+};
 
 const PROBLEMS = {
   unreachable: 'n8n did not answer, so nothing below is current.',
@@ -84,14 +89,15 @@ const PROBLEMS = {
 export default function App() {
   const [env, setEnv] = useState(() => read(localStorage, 'dashboard.env') || 'dev');
   const [range, setRange] = useState('24h');
-  const [state, setState] = useState({ loading: false, data: null, error: null, loadedAt: null });
+  const [variant, setVariant] = useState(() => read(localStorage, 'dashboard.variant') || 'all');
+  const [state, setState] = useState({ loading: false, stats: null, error: null, loadedAt: null });
   const [tab, setTab] = useState(null);
 
   const load = useCallback(async (signal) => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const data = await fetchStats({ env, range, mock, signal });
-      setState({ loading: false, data, error: null, loadedAt: new Date() });
+      const stats = await fetchStats({ env, range, mock, signal });
+      setState({ loading: false, stats, error: null, loadedAt: new Date() });
     } catch (error) {
       if (error?.name === 'AbortError') return;
       console.error('[Dashboard] stats failed:', error);
@@ -107,9 +113,10 @@ export default function App() {
     return () => { controller.abort(); clearInterval(timer); };
   }, [load]);
 
-  const groups = useMemo(() => buildRows(state.data?.endpoints), [state.data]);
+  const data = useMemo(() => state.stats?.(variant) || null, [state.stats, variant]);
+  const groups = useMemo(() => buildRows(data?.endpoints), [data]);
   const counts = useMemo(() => countByStatus(groups), [groups]);
-  const { data, error, loading, loadedAt } = state;
+  const { error, loading, loadedAt } = state;
 
   // One table at a time, so the detail sits under the charts without a long scroll.
   const tables = !data ? [] : [
@@ -140,10 +147,11 @@ export default function App() {
     <div className="page">
       <header className="header">
         <div>
-          <h1>Teaching Assistant health</h1>
+          <h1>Assistant health</h1>
         </div>
         <div className="controls">
           <Segmented label="Environment" options={ENVIRONMENTS} value={env} onChange={(id) => { write(localStorage, 'dashboard.env', id); setEnv(id); }} />
+          <Segmented label="Variant" options={VARIANTS} value={variant} onChange={(id) => { write(localStorage, 'dashboard.variant', id); setVariant(id); }} />
           <Segmented label="Time range" options={RANGES} value={range} onChange={setRange} />
           <button type="button" className="tonal" onClick={() => load()} disabled={loading}>
             <Icon name={loading ? 'progress_activity' : 'refresh'} spin={loading} /> Refresh
@@ -157,6 +165,7 @@ export default function App() {
       <p className="updated" role="status">
         {mock && 'Sample data. '}
         {loading && !data ? 'Loading…' : loadedAt ? `Updated ${loadedAt.toLocaleTimeString('en', { timeStyle: 'short' })}.` : ''}
+        {variant !== 'all' && ' The variant filters frontend errors, feedback and reports; executions, backend errors and prompts are for both.'}
       </p>
 
       {error && (

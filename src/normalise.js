@@ -14,6 +14,8 @@ const RECENT = 50;
 
 const stripWebhook = (url) => (url ? String(url).replace(/^.*\/webhook\//, '') : null);
 const text = (value) => (value ? String(value).slice(0, 300) : null);
+// The frontend sends { name, email } of the signed-in user with every webhook call.
+const who = (info) => [info?.name, info?.email].filter(Boolean).join(' · ') || null;
 
 const KINDS = [
   {
@@ -27,6 +29,7 @@ const KINDS = [
       message: text(r.error_message),
       executionId: r.execution_id,
       environment: r.environment,
+      user: who(r.user_information),
     }),
   },
   {
@@ -39,7 +42,8 @@ const KINDS = [
       route: r.route,
       webhook: stripWebhook(r.raw_payload?.webhook),
       status: r.raw_payload?.status ?? null,
-      appVariant: r.app_variant,
+      user: who(r.user_information || r.raw_payload?.userInformation),
+      variant: r.app_variant,
     }),
   },
   {
@@ -94,7 +98,12 @@ const NAMES = { backend: /^(?!.*front).*error/i, frontend: /front/i, feedback: /
 const FAILED = ['error', 'crashed'];
 const MINUTE = 60 * 1000;
 // range -> [number of chart buckets, bucket length]
-const BUCKETS = { '1h': [12, 5 * MINUTE], '24h': [24, 60 * MINUTE], '7d': [7, 24 * 60 * MINUTE], '30d': [30, 24 * 60 * MINUTE] };
+const DAY = 24 * 60 * MINUTE;
+const BUCKETS = {
+  '1h': [12, 5 * MINUTE], '24h': [24, 60 * MINUTE], '7d': [7, DAY], '30d': [30, DAY],
+  // Weeks for the longer ranges, so the bars stay readable.
+  '90d': [13, 7 * DAY], '180d': [26, 7 * DAY], '270d': [39, 7 * DAY], '365d': [52, 7 * DAY],
+};
 // Median, shortest and longest of the runs that have a duration.
 const spread = (values) => {
   const sorted = values.filter((v) => v !== null).sort((a, b) => a - b);
@@ -109,7 +118,9 @@ const countBy = (rows, pick) => {
 };
 
 // `now` is injectable so sample data and tests are not tied to today's date.
-export function normalise(reply, range, now = Date.now()) {
+// `variant` ('all', 'teacher', 'general') keeps only rows of that app; rows of tables without a
+// variant column (executions, backend errors, prompts) are always kept.
+export function normalise(reply, range, now = Date.now(), variant = 'all') {
   if (!reply || typeof reply !== 'object') throw new Error('The reply is not a list of rows');
 
   // The workflow returns every row it has; the range is applied here.
@@ -142,6 +153,7 @@ export function normalise(reply, range, now = Date.now()) {
     totalRows += 1;
     sets[kind.key] ||= [];
     const mapped = kind.map(value);
+    if (variant !== 'all' && 'variant' in mapped && mapped.variant !== variant) return;
     // Rows without a time were already filtered by the workflow.
     if (mapped.time === null || new Date(mapped.time).getTime() >= since) sets[kind.key].push(mapped);
   };

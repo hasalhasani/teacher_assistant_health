@@ -13,8 +13,9 @@ export class StatsError extends Error {
 
 // The only request this app makes. The Worker (worker/index.js) checks the
 // session and passes it on to the read-only stats workflow of that environment.
+// Returns `(variant) => page data`, so switching variant re-filters without asking n8n again.
 export async function fetchStats({ env, range, mock, signal }) {
-  if (mock) return normalise(fixture, range, FIXTURE_NOW);
+  if (mock) return (variant) => normalise(fixture, range, FIXTURE_NOW, variant);
 
   let response;
   try {
@@ -31,7 +32,10 @@ export async function fetchStats({ env, range, mock, signal }) {
   if (!response.ok) throw new StatsError('unreachable', `n8n answered HTTP ${response.status}.`);
 
   try {
-    return normalise(await response.json(), range);
+    const reply = await response.json();
+    const now = Date.now();
+    normalise(reply, range, now); // throws on a reply that isn't rows
+    return (variant) => normalise(reply, range, now, variant);
   } catch {
     throw new StatsError('bad_reply', 'The stats reply was not in the expected shape.');
   }

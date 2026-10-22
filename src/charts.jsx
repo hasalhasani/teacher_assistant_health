@@ -25,9 +25,12 @@ const niceMax = (value) => {
   return [2, 4, 6, 8, 10].map((m) => m * power).find((m) => m >= value);
 };
 
-const bucketLabel = (start, bucketMs) => (bucketMs >= 24 * 3600 * 1000
-  ? new Date(start).toLocaleDateString('en', { weekday: 'short', day: 'numeric' })
-  : new Date(start).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' }));
+const DAY_MS = 24 * 3600 * 1000;
+const bucketLabel = (start, bucketMs) => {
+  if (bucketMs >= 7 * DAY_MS) return new Date(start).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  if (bucketMs >= DAY_MS) return new Date(start).toLocaleDateString('en', { weekday: 'short', day: 'numeric' });
+  return new Date(start).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
+};
 
 const Legend = ({ series }) => (
   <ul className="legend">
